@@ -27,16 +27,28 @@ fn main() {
     for r in rot_list {
         assert_ne!(r, 0);
 
+        dbg!(pos);
+        dbg!(r);
+
+        let was_zero = pos == 0;
+
         pos += r;
         
         let wrap_count = 
             if pos <= 0 {
-                1 - pos / 100
+                if was_zero {
+                    -pos / 100
+                } else {
+                    1 - pos / 100
+                }
             } else if pos >= 100 {
                 pos / 100
             } else {
                 0
             };
+
+        dbg!(pos);
+        dbg!(wrap_count);
 
         pass_count += wrap_count;
 
@@ -45,6 +57,7 @@ fn main() {
         // dbg!(pos);
         zero_count += (pos == 0) as i32;
     }
+
 
     dbg!(zero_count);
     dbg!(pass_count);
