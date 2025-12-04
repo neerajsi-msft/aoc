@@ -339,6 +339,14 @@ impl Grid {
         self.add_direction(location, DIRECTION_VECTORS[direction as usize])
     }
 
+    pub fn neighbors(&self, location: Location) -> DirectionIterator {
+        DirectionIterator::new_all_dirs(location, self.rows, self.cols)
+    }
+
+    pub fn neighbors_cardinal(&self, location: Location) -> DirectionIterator {
+        DirectionIterator::new_cardinal(location, self.rows, self.cols)
+    }
+
     pub fn neighbors_iter<'a, I> (&'a self, location: Location, dirs: I) -> impl Iterator<Item = Location> + use<'a, I>
         where I: IntoIterator<Item = &'a DirectionName> + 'a
     {
@@ -375,6 +383,10 @@ impl Grid {
 
     pub fn cols(&self) -> usize {
         self.cols
+    }
+
+    pub fn cell_count(&self) -> usize {
+        self.rows * self.cols
     }
 
     pub fn row_range(&self) -> Range<usize> {
