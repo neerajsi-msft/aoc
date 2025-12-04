@@ -84,7 +84,7 @@ macro_rules! index2d {
 
 #[macro_export]
 macro_rules! index2d_array {
-    ($m:expr, $v:expr) => { ($m)[$v[0] as usize][$v[1] as usize] };
+    ($m:expr, $v:expr) => { ($m)[$v[0] as usize].as_ref()[$v[1] as usize] };
 }
 
 
@@ -339,6 +339,14 @@ impl Grid {
         self.add_direction(location, DIRECTION_VECTORS[direction as usize])
     }
 
+    pub fn neighbors_iter<'a, I> (&'a self, location: Location, dirs: I) -> impl Iterator<Item = Location> + use<'a, I>
+        where I: IntoIterator<Item = &'a DirectionName> + 'a
+    {
+        dirs.into_iter().filter_map( move |d| {
+            self.add_direction(location, DIRECTION_VECTORS[*d as usize])
+        })
+    }
+
     pub fn neighbors_iter_cardinal<'a, I> (&'a self, location: Location, dirs: I) -> impl Iterator<Item = Location> + use<'a, I>
         where I: IntoIterator<Item = &'a CardinalDirectionName> + 'a
     {
@@ -431,9 +439,23 @@ impl Iterator for DirectionIterator {
 
 impl std::iter::FusedIterator for DirectionIterator {}
 
-pub fn neighbors_cardinal<'a, T>(map: &'a [Vec<T>], location: Location) -> impl Iterator<Item = (Location, &'a T)>
+pub fn neighbors<'a, S, T>(map: &'a [S], location: Location) -> impl Iterator<Item = (Location, &'a T)>
+where
+    S: AsRef<[T]>,
+    T: 'a
 {
-    DirectionIterator::new_cardinal(location, map.len(), map[0].len())
+    DirectionIterator::new_all_dirs(location, map.len(), map[0].as_ref().len())
+        .map(|d| {
+            (d, &index2d_array!(map, d))
+        })
+}
+
+pub fn neighbors_cardinal<'a, S, T>(map: &'a [S], location: Location) -> impl Iterator<Item = (Location, &'a T)>
+where
+    S: AsRef<[T]>,
+    T: 'a
+{
+    DirectionIterator::new_cardinal(location, map.len(), map[0].as_ref().len())
         .map(|d| {
             (d, &index2d_array!(map, d))
         })
