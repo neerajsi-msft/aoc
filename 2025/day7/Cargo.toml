@@ -1,0 +1,8 @@
+[package]
+name = "day7"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bitvec = "1.0.1"
+neerajsi = { version = "0.1.0", path = "../../lib/neerajsi" }
