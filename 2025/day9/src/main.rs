@@ -50,6 +50,7 @@ fn part1(points: &[[u32; 2]]) -> u64 {
         .unwrap()
 }
 
+#[inline(never)]
 fn part2(points: &[[u32; 2]], debug: bool) -> u32 {
     let upper_left_bound = points.iter().fold([u32::MAX; 2], |acc, p| {
         [min(acc[0], p[0]), min(acc[1], p[1])]
