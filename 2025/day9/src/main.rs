@@ -30,19 +30,15 @@ fn main() {
     println!("p2: {}", p2);
 }
 
-fn rect_area(points: &[&[u32; 2]; 2]) -> u64 {
-    (0..2).map(|i| (points[0][i].abs_diff(points[1][i]) + 1) as u64).product::<u64>()
+fn rect_area<P>(points: &[P;2]) -> u64 
+    where P: std::borrow::Borrow<[u32; 2]>
+{
+    let points = points.as_ref();
+    let p1 = points[0].borrow();
+    let p2 = points[1].borrow();
+    (0..2).map(|i| (p1[i].abs_diff(p2[i]) + 1) as u64).product::<u64>()
 }
 
-fn intersect_ranges<T: Ord, Copy>(r1: &Range<T>, r2: &Range<T>) -> Option<Range<T>> {
-    let start = max(r1.start.clone(), r2.start.clone());
-    let end = min(r1.end.clone(), r2.end.clone());
-    if start < end {
-        Some(start..end)
-    } else {
-        None
-    }
-}
 
 fn part1(points: &[[u32; 2]]) -> u64 {
     points.iter()
@@ -65,33 +61,21 @@ fn part2(points: &[[u32; 2]], debug: bool) -> u32 {
 
     println!("Bounding box: {:?} to {:?}", upper_left_bound, low_right_bound);
 
+
     let vertical_lines = points.iter().tuple_windows()
         .filter(|(p, q)| p[1] == q[1])
         .map(|(p, q)| {
             let col = p[1] as usize;
             let start_row = min(p[0], q[0]) as usize;
             let end_row = max(p[0], q[0]) as usize;
-            (col, start_row, end_row + 1)
+            (col, start_row, end_row)
         })
         .sorted()
         .collect_vec();
 
     println!("Found {} vertical lines", vertical_lines.len());
     
-    let mut column_ranges: BTreeMap<usize, RangeSet<usize>> = BTreeMap::new();
-    for &(col, start_row, end_row) in &vertical_lines {
-        column_ranges.entry(col).or_insert_with(RangeSet::new).insert(start_row..end_row);
-    }
 
-    for (c1, c2) in column_ranges.iter().tuple_windows() {
-        if c1.1.intersection(c2.1).count() > 0 {
-            println!("Warning: adjacent column ranges detected {} - {r:?}", c1.0);
-            break;
-        }
-    }
-
-    println!("Constructed column ranges for {} columns", column_ranges.len());
-    
     let mut max_area = 0;
     let mut rects = points
         .iter()
@@ -99,127 +83,39 @@ fn part2(points: &[[u32; 2]], debug: bool) -> u32 {
         .map(|rect| {
             let top_left = [min(rect[0][0], rect[1][0]), min(rect[0][1], rect[1][1])];
             let bottom_right = [max(rect[0][0], rect[1][0]), max(rect[0][1], rect[1][1])];
-            (top_left, bottom_right)
+            [top_left, bottom_right]
         })
-        .collect::<BTreeSet<_>>();
+        .sorted_by(|r1, r2| {
+            rect_area(r2).cmp(&rect_area(r1))
+        })
+        .collect_vec();
     
-    let mut outside_map: RangeMap<usize, usize> = RangeMap::new();
-    outside_map.insert(0..low_right_bound[0] as usize + 1, 0);
-    let mut inside_map: RangeMap<usize, usize> = RangeMap::new();
-    let mut new_outside = vec![];
-    let mut new_inside = vec![];
-    let mut inside_rects = vec![];
-    for col in 0..column_ranges.len() {
-        let col_ranges = &column_ranges[col];
-        if col_ranges.is_empty() {
-            continue;
-        }
-        
-        for r in col_ranges.iter() {
-            for g in outside_map.gaps(r) {
-                let ir = inside_map.overlapping(g).at_most_one().ok().unwrap().unwrap();
-                let it = intersect_ranges(g, ir.0).unwrap();
-                assert_eq!(ir, it);
-
-                new_outside.push(g.clone());
-            }
-            
-            for o in outside_map.overlapping(r) {
-                let it = intersect_ranges(o.0, r).unwrap();
-                assert_eq!(Some(o.0.clone()), it);
-
-                new_inside.push(it.unwrap());
-            }
-        }
-
-        for no in new_outside {
-            inside_map.remove(no);
-        }
-
-        for ni in new_inside {
-            outside_map.remove(ni);
-        }
-
-        for no in new_outside {
-            outside_map.insert(no, col + 1);
-        }
-
-        for ni in new_inside {
-            inside_map.insert(ni, col);
-        }
-
-        new_outside.clear();
-        new_inside.clear();
-    }
-
-    /*
-    let mut counter = 0;
-    let rects = points.iter().array_combinations::<2>();
-    let rect_count = rects.clone().count();
-
-    let rects = rects.sorted_by(|r1, r2| {
-        rect_area(&r1).cmp(&rect_area(&r2))
-    })
-    .collect_vec();
-
-    println!("Finding largest filled rectangle among {} candidates", rect_count);
+    // for each rectangle in descending area,
+    // check for any lines that lie within the rectangle.
+    // This is essentially the clipping algorithm for a
+    // general polygon.
 
     'rect_loop:
-    for rect in rects.iter().rev() {
-        counter += 1;
-        if debug && counter % 1000 == 0 {
-            println!("Checked {}/{} rectangles so far, current max area={}", counter, rect_count, max_area);
-        }
-
-        let top_left = [min(rect[0][0], rect[1][0]), min(rect[0][1], rect[1][1])];
-        let bottom_right = [max(rect[0][0], rect[1][0]), max(rect[0][1], rect[1][1])];
-
-        let first_row = top_left[0] as usize;
-        let last_row = bottom_right[0] as usize;
-        let first_col = top_left[1] as usize;
-        let last_col = bottom_right[1] as usize;
-        for row in first_row..=last_row {
-            let mut fill_start = None;
-            let mut last_fill_end = None;
-            for c in 0..=last_col {
-                if column_ranges[c].contains(&row) {
-                    if fill_start.is_none() {
-                        fill_start = Some(c);
-                        if let Some(last_fill_end) = last_fill_end {
-                            if last_fill_end > first_col {
-                                continue 'rect_loop;
-                            }
-                        } else {
-                            if c > first_col {
-                                continue 'rect_loop;
-                            }
-                        }
-                    } else {
-                        fill_start = None;
-                        last_fill_end = Some(c);
-                    }
-                }
+    for rect in rects.iter() {
+        for (col, start_row, end_row) in vertical_lines.iter() {
+            let col = *col as u32;
+            // line outside rectangle by column
+            if col <= rect[0][1] || col >= rect[1][1] {
+                continue;
             }
 
-            assert!(fill_start.is_some() || last_fill_end.is_some(), "Row {} has no fills", row);
-            if fill_start.is_none() {
-                if let Some(last_fill_end) = last_fill_end {
-                    if last_fill_end < last_col {
-                        continue 'rect_loop;
-                    }
-                }
+            // line outside rectangle by row
+            if *start_row >= rect[1][0] as usize || *end_row <= rect[0][0] as usize {
+                continue;
             }
+
+            continue 'rect_loop;
         }
 
-        let area = rect_area(&[&top_left, &bottom_right]) as u32;
-        if debug {
-            println!("Found filled rectangle: top_left={:?}, bottom_right={:?}, area={}", top_left, bottom_right, area);
-        }
+        let area = rect_area(rect) as u32;
         max_area = max(max_area, area);
         break;
     }
-
-    */
 
     max_area
 }
