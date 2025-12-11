@@ -4,5 +4,10 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+bitvec = "1.0.1"
+image = "0.25.9"
 itertools = "0.14.0"
 neerajsi = { version = "0.1.0", path = "../../lib/neerajsi" }
+range-ext = "0.3.0"
+rangemap = "1.7.0"
+rayon = "1.11.0"
