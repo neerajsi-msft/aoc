@@ -5,5 +5,7 @@ edition = "2024"
 
 [dependencies]
 bitvec = "1.0.1"
+nalgebra = "0.33.2"
 neerajsi = { version = "0.1.0", path = "../../lib/neerajsi" }
+num-rational = "0.4.2"
 sscanf = "0.4.4"

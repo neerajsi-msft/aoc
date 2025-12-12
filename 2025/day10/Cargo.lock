@@ -78,7 +78,9 @@ name = "day10"
 version = "0.1.0"
 dependencies = [
  "bitvec",
+ "nalgebra",
  "neerajsi",
+ "num-rational",
  "sscanf",
 ]
 
