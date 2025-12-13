@@ -1,12 +1,12 @@
 use core::panic;
 use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::env::args;
-use std::{any, fmt, u32};
+use std::{fmt, u32};
 
 use bitvec::prelude::*;
-use nalgebra::{DMatrix, DVector, LU};
+use nalgebra::{DMatrix, DVector};
 use neerajsi::read_stdin_input;
-use num_rational::{Rational, Rational32};
+use num_rational::Rational32;
 
 struct Machine {
     lights: u16,
@@ -292,7 +292,7 @@ fn part2(machines: &[Machine], debug: bool) -> u32 {
                     if r != c && matrix[(r, c)] != Rational32::ZERO {
                         let sign = matrix[(r, c)];
                         for cc in 0..=ncols {
-                            matrix[(r, cc)] = (matrix[(r, cc)] - sign * matrix[(c, cc)]);
+                            matrix[(r, cc)] = matrix[(r, cc)] - sign * matrix[(c, cc)] ;
                         }
                     }
                 }
@@ -332,7 +332,7 @@ fn part2(machines: &[Machine], debug: bool) -> u32 {
             }
 
             let solution = matrix.column_part(ncols, ncols);
-            if (debug) {
+            if debug  {
                 println!("Solution: {}", solution);
             }
 
@@ -487,7 +487,7 @@ fn part2(machines: &[Machine], debug: bool) -> u32 {
             }
             
             let mut best_cost = usize::MAX;
-            while (assignment[free_variables[0]] <= Rational32::from_integer(variable_ranges[free_variables[0]].1)) {
+            while assignment[free_variables[0]] <= Rational32::from_integer(variable_ranges[free_variables[0]].1)  {
                 
                 // compute dependent variables
                 let mut valid = true;
