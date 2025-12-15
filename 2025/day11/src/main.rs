@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env::args, ffi::FromBytesUntilNulError, path};
+use std::{collections::HashMap, env::args};
 use neerajsi::*;
 
 struct PuzzleState<'a> {
@@ -62,13 +62,17 @@ fn main() {
     let debug1 = debug || args().any(|arg| arg == "debug1");
     let debug2 = debug || args().any(|arg| arg == "debug2");
 
-    detect_cycles(&puzzle_state, "you", debug1);
+    if puzzle_state.get_node("you").is_some() {
+        detect_cycles(&puzzle_state, "you", debug1);
+        let p1 = part1(&puzzle_state, debug1);
+        println!("Part 1: {}", p1);        
+    }
 
-    let p1 = part1(&puzzle_state, debug1);
-    println!("Part 1: {}", p1);
-
-    detect_cycles(&puzzle_state, "svr", debug2);
-
+    if puzzle_state.get_node("svr").is_some() {
+        detect_cycles(&puzzle_state, "svr", debug2);
+        let p2 = part2(&puzzle_state, debug2);
+        println!("Part 2: {}", p2);        
+    }
 }
 
 fn detect_cycles(puzzle_state: &PuzzleState, start_node: &str, debug: bool) {
@@ -115,6 +119,10 @@ fn path_count(puzzle_state: &PuzzleState, start_node: &str, end_node: &str, debu
 
     let mut stack = vec![(start, false)];
 
+    if debug {
+        println!("Calculating paths from {} to {}", start_node, end_node);
+    }
+
     // DFS with post-order processing to add up the
     // count of paths to the end.
     while let Some((node, processed)) = stack.pop() {
@@ -127,7 +135,7 @@ fn path_count(puzzle_state: &PuzzleState, start_node: &str, end_node: &str, debu
             path_to_end_count[node] = total_paths;
 
             if debug {
-                println!("Node {} has {} paths to end", puzzle_state.node_to_name[node], total_paths);
+                println!("   Node {} has {} paths to end", puzzle_state.node_to_name[node], total_paths);
             }
         } else {
             // Pre-order processing
@@ -146,10 +154,35 @@ fn path_count(puzzle_state: &PuzzleState, start_node: &str, end_node: &str, debu
         }
     }
 
+    println!(">Total paths from {} to {}: {}", start_node, end_node, path_to_end_count[start]);
+
     path_to_end_count[start]
 
 }
 
 fn part1(puzzle_state: &PuzzleState, debug: bool) -> usize {
     path_count(puzzle_state, "you", "out", debug)
+}
+
+fn part2(puzzle_state: &PuzzleState, debug: bool) -> usize {
+    let fft_to_dac = path_count(puzzle_state, "fft", "dac", debug);
+    let dac_to_fft = path_count(puzzle_state, "dac", "fft", debug);
+
+    assert!(fft_to_dac == 0 || dac_to_fft == 0, "There should be no cycles between fft and dac");
+
+    if debug {
+        let svr_to_end = path_count(puzzle_state, "svr", "out", debug);
+        println!(">Total paths from svr to out: {}", svr_to_end);
+    }
+
+    if fft_to_dac > 0  {
+        fft_to_dac * 
+            path_count(puzzle_state, "svr", "fft", debug) *
+            path_count(puzzle_state, "dac", "out", debug)
+    } else {
+        dac_to_fft *
+            path_count(puzzle_state, "svr", "dac", debug) *
+            path_count(puzzle_state, "fft", "out", debug)
+    }
+
 }
